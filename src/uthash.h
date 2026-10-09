@@ -310,7 +310,7 @@ do {                                                                            
 
 #if HASH_NONFATAL_OOM
 
-#define HASH_ADD_TO_TABLE(hh,head,keyptr,keylen_in,hashval,add,oomed)            \
+#define HASH_ADD_TO_TABLE(hh,head,hashval,add,oomed,onsuccess)                   \
 do {                                                                             \
   if (!(oomed)) {                                                                \
     unsigned _ha_bkt;                                                            \
@@ -323,8 +323,7 @@ do {                                                                            
       (add)->hh.tbl = NULL;                                                      \
       uthash_nonfatal_oom(add);                                                  \
     } else {                                                                     \
-      HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                   \
-      HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                \
+      onsuccess                                                                  \
     }                                                                            \
   } else {                                                                       \
     (add)->hh.tbl = NULL;                                                        \
@@ -334,14 +333,13 @@ do {                                                                            
 
 #else
 
-#define HASH_ADD_TO_TABLE(hh,head,keyptr,keylen_in,hashval,add,oomed)            \
+#define HASH_ADD_TO_TABLE(hh,head,hashval,add,oomed,onsuccess)                   \
 do {                                                                             \
   unsigned _ha_bkt;                                                              \
   (head)->hh.tbl->num_items++;                                                   \
   HASH_TO_BKT(hashval, (head)->hh.tbl->num_buckets, _ha_bkt);                    \
   HASH_ADD_TO_BKT((head)->hh.tbl->buckets[_ha_bkt], hh, &(add)->hh, oomed);      \
-  HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                       \
-  HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                    \
+  onsuccess                                                                      \
 } while (0)
 
 #endif
@@ -376,7 +374,10 @@ do {                                                                            
       HASH_AK_APPEND((head)->hh.tbl, add, &(add)->hh);                           \
     }                                                                            \
   }                                                                              \
-  HASH_ADD_TO_TABLE(hh, head, keyptr, keylen_in, hashval, add, _ha_oomed);       \
+  HASH_ADD_TO_TABLE(hh, head, hashval, add, _ha_oomed,                           \
+    HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                     \
+    HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                  \
+  );                                                                             \
   HASH_FSCK(hh, head, "HASH_ADD_KEYPTR_BYHASHVALUE_INORDER");                    \
 } while (0)
 
@@ -410,7 +411,10 @@ do {                                                                            
     (add)->hh.tbl = (head)->hh.tbl;                                              \
     HASH_AK_APPEND((head)->hh.tbl, add, &(add)->hh);                             \
   }                                                                              \
-  HASH_ADD_TO_TABLE(hh, head, keyptr, keylen_in, hashval, add, _ha_oomed);       \
+  HASH_ADD_TO_TABLE(hh, head, hashval, add, _ha_oomed,                           \
+    HASH_BLOOM_ADD((head)->hh.tbl, hashval);                                     \
+    HASH_EMIT_KEY(hh, head, keyptr, keylen_in);                                  \
+  );                                                                             \
   HASH_FSCK(hh, head, "HASH_ADD_KEYPTR_BYHASHVALUE");                            \
 } while (0)
 
