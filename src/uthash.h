@@ -979,8 +979,8 @@ do {                                                                            
 #define HASH_SELECT(hh_dst, dst, hh_src, src, cond)                              \
 do {                                                                             \
   unsigned _src_bkt, _dst_bkt;                                                   \
-  void *_last_elt = NULL, *_elt;                                                 \
-  UT_hash_handle *_src_hh, *_dst_hh, *_last_elt_hh=NULL;                         \
+  void *_elt;                                                                    \
+  UT_hash_handle *_src_hh, *_dst_hh;                                             \
   ptrdiff_t _dst_hho = ((char*)(&(dst)->hh_dst) - (char*)(dst));                 \
   if ((src) != NULL) {                                                           \
     for (_src_bkt=0; _src_bkt < (src)->hh_src.tbl->num_buckets; _src_bkt++) {    \
@@ -994,11 +994,6 @@ do {                                                                            
           _dst_hh->key = _src_hh->key;                                           \
           _dst_hh->keylen = _src_hh->keylen;                                     \
           _dst_hh->hashv = _src_hh->hashv;                                       \
-          _dst_hh->prev = _last_elt;                                             \
-          _dst_hh->next = NULL;                                                  \
-          if (_last_elt_hh != NULL) {                                            \
-            _last_elt_hh->next = _elt;                                           \
-          }                                                                      \
           if ((dst) == NULL) {                                                   \
             DECLTYPE_ASSIGN(dst, _elt);                                          \
             HASH_MAKE_TABLE(hh_dst, dst, _hs_oomed);                             \
@@ -1011,6 +1006,7 @@ do {                                                                            
             )                                                                    \
           } else {                                                               \
             _dst_hh->tbl = (dst)->hh_dst.tbl;                                    \
+            HASH_AK_APPEND(_dst_hh->tbl, _elt, _dst_hh);                         \
           }                                                                      \
           HASH_TO_BKT(_dst_hh->hashv, _dst_hh->tbl->num_buckets, _dst_bkt);      \
           HASH_ADD_TO_BKT(_dst_hh->tbl->buckets[_dst_bkt], hh_dst, _dst_hh, _hs_oomed); \
@@ -1025,8 +1021,6 @@ do {                                                                            
             }                                                                    \
           )                                                                      \
           HASH_BLOOM_ADD(_dst_hh->tbl, _dst_hh->hashv);                          \
-          _last_elt = _elt;                                                      \
-          _last_elt_hh = _dst_hh;                                                \
         }                                                                        \
       }                                                                          \
     }                                                                            \
