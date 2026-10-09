@@ -9,7 +9,7 @@
 #undef uthash_nonfatal_oom
 #define uthash_malloc(sz) alt_malloc(sz)
 #define uthash_free(ptr,sz) alt_free(ptr)
-#define uthash_nonfatal_oom(e) do{(e)->mem_failed=1;}while(0)
+#define uthash_nonfatal_oom(e) do { ((example_user_t*)e)->mem_failed=1; } while(0)
 #define all_select(a) 1
 
 typedef struct example_user_t {
@@ -68,6 +68,9 @@ int main()
 
     user->id = id;
 
+    /////////////////////////////////////////////////////////////
+    // Test HASH_ADD_INT
+
 #ifdef HASH_BLOOM
     malloc_cnt = 3; // bloom filter must fail
     user->mem_failed = 0;
@@ -105,6 +108,58 @@ int main()
     if (HASH_COUNT(users) != 1) {
         printf("Got HASH_COUNT(users)=%d, should be 1\n", HASH_COUNT(users));
     }
+
+    /////////////////////////////////////////////////////////////
+    // Test HASH_SELECT
+
+    HASH_CLEAR(hh, users);
+
+    malloc_cnt = 999;
+    user->mem_failed = 0;
+    HASH_ADD(hh2, users2, id, sizeof(int), user);
+    if (user->mem_failed) {
+        printf("mem_failed must be 0, not %d\n", user->mem_failed);
+    }
+
+#ifdef HASH_BLOOM
+    malloc_cnt = 3; // bloom filter must fail
+    user->mem_failed = 0;
+    user->hh.tbl = (UT_hash_table*)1;
+    free_cnt = 0;
+    HASH_SELECT(hh, users, hh2, users2, all_select);
+    complain(1, users, user);
+#endif /* HASH_BLOOM */
+
+    malloc_cnt = 2; // bucket creation must fail
+    user->mem_failed = 0;
+    free_cnt = 0;
+    user->hh.tbl = (UT_hash_table*)1;
+    HASH_SELECT(hh, users, hh2, users2, all_select);
+    complain(2, users, user);
+
+    malloc_cnt = 1; // table creation must fail
+    user->mem_failed = 0;
+    free_cnt = 0;
+    user->hh.tbl = (UT_hash_table*)1;
+    HASH_SELECT(hh, users, hh2, users2, all_select);
+    complain(3, users, user);
+
+    malloc_cnt = 4; // hash must create OK
+    user->mem_failed = 0;
+    HASH_SELECT(hh, users, hh2, users2, all_select);
+    if (user->mem_failed) {
+        printf("mem_failed must be 0, not %d\n", user->mem_failed);
+    }
+    HASH_FIND_INT(users,&id,test);
+    if (!test) {
+        printf("test user ID %d not found\n", id);
+    }
+
+    if (HASH_COUNT(users) != 1) {
+        printf("Got HASH_COUNT(users)=%d, should be 1\n", HASH_COUNT(users));
+    }
+
+    /////////////////////////////////////////////////////////////
 
     // let's add users until expansion fails.
     malloc_failed = 0;
@@ -179,10 +234,6 @@ int main()
     HASH_ITER(hh, users, user, test) {
         user->mem_failed = 0;
     }
-
-// HASH_SELECT calls uthash_nonfatal_oom() with an argument of type (void*).
-#undef uthash_nonfatal_oom
-#define uthash_nonfatal_oom(e) do{((example_user_t*)e)->mem_failed=1;}while(0)
 
     malloc_cnt = 0;
     free_cnt = 0;
