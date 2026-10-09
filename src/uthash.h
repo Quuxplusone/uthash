@@ -275,12 +275,12 @@ do {                                                                            
   HASH_REPLACE_BYHASHVALUE_INORDER(hh, head, fieldname, keylen_in, _hr_hashv, add, replaced, cmpfcn); \
 } while (0)
 
-#define HASH_APPEND_LIST(hh, head, add)                                          \
+#define HASH_AK_APPEND(tbl, add, add_hh)                                         \
 do {                                                                             \
-  (add)->hh.next = NULL;                                                         \
-  (add)->hh.prev = ELMT_FROM_HH((head)->hh.tbl, (head)->hh.tbl->tail);           \
-  (head)->hh.tbl->tail->next = (add);                                            \
-  (head)->hh.tbl->tail = &((add)->hh);                                           \
+  (add_hh)->next = NULL;                                                         \
+  (add_hh)->prev = ELMT_FROM_HH(tbl, (tbl)->tail);                               \
+  (tbl)->tail->next = (add);                                                     \
+  (tbl)->tail = (add_hh);                                                        \
 } while (0)
 
 #define HASH_AKBI_INNER_LOOP(hh,head,add,cmpfcn)                                 \
@@ -373,7 +373,7 @@ do {                                                                            
       }                                                                          \
       HH_FROM_ELMT((head)->hh.tbl, _hs_iter)->prev = (add);                      \
     } else {                                                                     \
-      HASH_APPEND_LIST(hh, head, add);                                           \
+      HASH_AK_APPEND((head)->hh.tbl, add, &(add)->hh);                           \
     }                                                                            \
   }                                                                              \
   HASH_ADD_TO_TABLE(hh, head, keyptr, keylen_in, hashval, add, _ha_oomed);       \
@@ -408,7 +408,7 @@ do {                                                                            
     IF_HASH_NONFATAL_OOM( } )                                                    \
   } else {                                                                       \
     (add)->hh.tbl = (head)->hh.tbl;                                              \
-    HASH_APPEND_LIST(hh, head, add);                                             \
+    HASH_AK_APPEND((head)->hh.tbl, add, &(add)->hh);                             \
   }                                                                              \
   HASH_ADD_TO_TABLE(hh, head, keyptr, keylen_in, hashval, add, _ha_oomed);       \
   HASH_FSCK(hh, head, "HASH_ADD_KEYPTR_BYHASHVALUE");                            \
